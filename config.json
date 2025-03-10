@@ -1,5 +1,5 @@
 {
-    "repeats": 10,
+    "repeats": 100,
     "problems": ["vanderpol", "cr3bp"],
     "languages": ["rust", "python", "fortran"],
     "problem_settings": {

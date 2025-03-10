@@ -95,6 +95,10 @@ def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
         exclude_mask = df['implementation'].isin(exclude)
         df = df[~exclude_mask]
     
+    # Create a mapping of languages to colors
+    languages = sorted(df['language'].unique())  # Sort languages for consistent ordering
+    color_map = {lang: plt.cm.tab10(i % 10 / 10) for i, lang in enumerate(languages)}
+    
     # Group by problem
     problems = df['problem'].unique()
     num_problems = len(problems)
@@ -119,17 +123,17 @@ def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
         positions = np.arange(len(problem_df))
         bar_height = 0.8
         
-        # Choose a consistent color for this problem
-        problem_color = plt.cm.tab10(i / 10)
-        
         # Determine the maximum time for this problem to set x-axis limit
         max_time = problem_df['average_time'].max() * 1.2  # Add 20% margin
         
         # Create bars
         for j, (idx, row) in enumerate(problem_df.iterrows()):
+            # Use color based on language instead of problem
+            bar_color = color_map[row['language']]
+            
             # Create the horizontal bar with average time
             bar = ax.barh(j, row['average_time'], height=bar_height, 
-                         color=problem_color, alpha=0.7, edgecolor='black', linewidth=1)
+                         color=bar_color, alpha=0.7, edgecolor='black', linewidth=1)
             
             # Add implementation text inside bar if room
             if row['average_time'] > 10:  # Adjusted threshold for ms
@@ -169,6 +173,11 @@ def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
     
     # Add overall title
     fig.suptitle(f'DOP853 Implementation Speed Comparison', fontsize=16, y=0.98)
+    
+    # Create language legend
+    language_patches = [plt.Rectangle((0, 0), 1, 1, color=color_map[lang]) for lang in languages]
+    fig.legend(language_patches, languages, loc='lower center', ncol=min(len(languages), 5), 
+               title="Language", bbox_to_anchor=(0.5, 0.03))
     
     # Improve layout with more space at top and bottom
     plt.tight_layout()
