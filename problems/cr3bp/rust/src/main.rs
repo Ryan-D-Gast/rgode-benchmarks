@@ -6,7 +6,7 @@ pub struct Cr3bp {
     pub mu: f64,
 }
 
-impl System<6> for Cr3bp {
+impl System<f64, SVector<f64, 6>> for Cr3bp {
     fn diff(&self, _t: f64, y: &SVector<f64, 6>, dydt: &mut SVector<f64, 6>) {
         let mu = self.mu;
 
