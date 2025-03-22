@@ -1,4 +1,4 @@
-use rgode::{IVP, System, DOP853};
+use rgode::prelude::*;
 use nalgebra::{SVector, vector};
 use std::env;
 
