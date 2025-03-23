@@ -15,6 +15,16 @@ def load_benchmark_data(json_path):
     # Extract hardware info
     hardware_info = data.get("hardware_info", {})
     
+    # Extract initial conditions from problem settings
+    problem_conditions = {}
+    if "config" in data and "problem_settings" in data["config"]:
+        problem_settings = data["config"]["problem_settings"]
+        # Format initial conditions for each problem
+        for problem, settings in problem_settings.items():
+            y0_str = ", ".join([f"{y:.3g}" for y in settings.get("y0", [])])
+            t_range = f"t = {settings.get('t0', 0)} to {settings.get('tf', 0)}"
+            problem_conditions[problem] = f"Initial conditions: y(0) = [{y0_str}], {t_range}"
+    
     # Convert JSON results to DataFrame
     rows = []
     
@@ -64,7 +74,7 @@ def load_benchmark_data(json_path):
         fortran_mask = (df['language'] == 'fortran') & (df['implementation'] == 'fortran')
         df = df[~fortran_mask]
     
-    return df, hardware_info
+    return df, hardware_info, problem_conditions
 
 def format_hardware_info(hardware_info):
     """Format hardware information for display"""
@@ -85,7 +95,7 @@ def format_hardware_info(hardware_info):
     
     return f"{processor}{freq_text}, {cpu_count} cores"
 
-def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
+def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None, problem_conditions=None):
     """Create horizontal bar graphs by problem in separate subplots"""
     # Make a copy of the DataFrame to avoid SettingWithCopyWarning
     df = df.copy()
@@ -166,18 +176,23 @@ def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
         # Only put x-label on bottom plots
         if i >= (rows-1) * cols:
             ax.set_xlabel('Time (milliseconds)')
+            
+            # Add initial conditions below x-axis label if available for this problem
+            if problem_conditions and problem in problem_conditions:
+                ax.text(0.5, -0.25, problem_conditions[problem], transform=ax.transAxes,
+                       ha='center', va='center', fontsize=6, style='italic')
     
     # Hide any unused subplots
     for i in range(num_problems, len(axes)):
         axes[i].set_visible(False)
     
     # Add overall title
-    fig.suptitle(f'DOP853 Implementation Speed Comparison', fontsize=16, y=0.98)
+    fig.suptitle(f'rgode DOP853 Performance vs Fortran Implementations', fontsize=16, y=0.98)
     
     # Create language legend
     language_patches = [plt.Rectangle((0, 0), 1, 1, color=color_map[lang]) for lang in languages]
     fig.legend(language_patches, languages, loc='lower center', ncol=min(len(languages), 5), 
-               title="Language", bbox_to_anchor=(0.5, 0.03))
+               title="Language", bbox_to_anchor=(0.5, 0.05), frameon=False)
     
     # Improve layout with more space at top and bottom
     plt.tight_layout()
@@ -188,6 +203,11 @@ def create_bar_graph(df, hardware_info=None, exclude=None, output_path=None):
         hw_text = format_hardware_info(hardware_info)
         plt.figtext(0.02, 0.02, hw_text, fontsize=9, 
                    bbox=dict(facecolor='white', alpha=0.7, boxstyle='round,pad=0.5'))
+    
+    # Add DOP853 explanation footnote in bottom right
+    dop853_note = "DOP853: 8th-order Dormand-Prince Runge-Kutta method with adaptive step size control"
+    plt.figtext(0.98, 0.02, dop853_note, fontsize=8, ha='right', 
+               bbox=dict(facecolor='white', alpha=0.7, boxstyle='round,pad=0.5'))
     
     # Save or display
     if output_path:
@@ -210,8 +230,8 @@ def main():
         output_path = json_path.with_suffix('.png')
     
     # Load data and create plot
-    df, hardware_info = load_benchmark_data(Path(args.json_file))
-    create_bar_graph(df, hardware_info, args.exclude, output_path)
+    df, hardware_info, problem_conditions = load_benchmark_data(Path(args.json_file))
+    create_bar_graph(df, hardware_info, args.exclude, output_path, problem_conditions)
 
 if __name__ == "__main__":
     main()
